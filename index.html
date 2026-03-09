@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="es">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Catastro acuicola del municipio de Shinahota</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand__title">Catastro acuicola del municipio de Shinahota</div>
+    </div>
+
+    <!-- ✅ ID para tutorial -->
+    <div id="tour-filters" class="topbar__filters">
+      <div class="filter">
+        <div class="filter__label">CENTRAL</div>
+        <select id="filter-central" class="filter__select">
+          <option value="">Todos</option>
+        </select>
+      </div>
+
+      <div class="filter">
+        <div class="filter__label">Sindicacto</div>
+        <select id="filter-sindicato" class="filter__select">
+          <option value="">Todos</option>
+        </select>
+      </div>
+
+      <div class="search">
+        <div class="filter__label">Buscar propietario</div>
+        <div class="search__box">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input id="search-input" class="search__input" type="text" placeholder="Escribe un nombre..."
+            autocomplete="off" />
+          <button id="search-clear" class="search__clear" title="Limpiar">✕</button>
+        </div>
+        <div id="search-results" class="search__results hidden"></div>
+      </div>
+    </div>
+
+    <!-- ✅ ID para tutorial -->
+    <div id="tour-map-tools" class="topbar__tools">
+      <button id="btn-admin-panel" class="btn" title="Gestión de Cambios"><i
+          class="fa-solid fa-user-shield"></i></button>
+      <button id="btn-home" class="btn" title="Ir a vista inicial"><i class="fa-solid fa-house"></i></button>
+      <button id="btn-toggle-layers" class="btn" title="Mostrar/Ocultar control de capas"><i
+          class="fa-solid fa-layer-group"></i></button>
+      <button id="btn-toggle-legend" class="btn" title="Mostrar/Ocultar leyenda"><i
+          class="fa-solid fa-list"></i></button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- IZQUIERDA: DASHBOARD -->
+    <aside class="sidebar">
+
+      <!-- ✅ KPIs agrupados para tutorial -->
+      <div id="tour-kpis">
+        <div class="card kpi kpi--big">
+          <div class="kpi__label">Predios con estanques</div>
+          <div id="kpi-predios" class="kpi__value">—</div>
+        </div>
+
+        <div class="kpi-row">
+          <button id="kpi-btn-completo" class="card kpi kpi--green kpi-btn" type="button">
+            <div class="kpi__label">Completos</div>
+            <div id="kpi-completos" class="kpi__value kpi__value--sm">—</div>
+          </button>
+
+          <button id="kpi-btn-parcial" class="card kpi kpi--orange kpi-btn" type="button">
+            <div class="kpi__label">Parciales</div>
+            <div id="kpi-parciales" class="kpi__value kpi__value--sm">—</div>
+          </button>
+
+          <button id="kpi-btn-sindatos" class="card kpi kpi--red kpi-btn" type="button">
+            <div class="kpi__label">Sin Datos</div>
+            <div id="kpi-sindatos" class="kpi__value kpi__value--sm">—</div>
+          </button>
+        </div>
+
+        <div class="card kpi kpi--big">
+          <div class="kpi__label">Estanques identificados</div>
+          <div id="kpi-est-obser" class="kpi__value">—</div>
+        </div>
+      </div>
+
+      <!-- ✅ Gráfico agrupado para tutorial -->
+      <div id="tour-chart">
+        <div class="card chart-card">
+          <div class="chart-title">
+            <span id="chart-title">Tiene RUNSA?</span>
+            <button id="btn-clear-dashboard-filters" class="mini-btn"
+              title="Quitar filtros del dashboard">Limpiar</button>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="chart-runsa"></canvas>
+          </div>
+          <div class="chart-tabs" role="tablist" aria-label="Gráficos">
+            <button id="tab-chart-runsa" class="tab-btn active" type="button" role="tab"
+              aria-selected="true">RUNSA</button>
+            <button id="tab-chart-species" class="tab-btn" type="button" role="tab"
+              aria-selected="false">Especies</button>
+          </div>
+          <div id="chart-footnote" class="chart-footnote">Click en “Sí” o “No” para filtrar</div>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- CENTRO: MAPA + LEYENDA + DRAWER TABLA -->
+    <section class="mapwrap">
+      <div id="map"></div>
+
+      <div id="loader" class="loader hidden">
+        <div class="spinner"></div>
+        <div class="loader__text">Cargando capas…</div>
+      </div>
+
+      <aside id="legend" class="legend hidden">
+        <div class="legend__header">
+          <div class="legend__title">Leyenda (capas activas)</div>
+          <button id="legend-close" class="legend__close" title="Cerrar">✕</button>
+        </div>
+        <div id="legend-content" class="legend__content"></div>
+      </aside>
+
+      <!-- Drawer TABLA (derecha) -->
+      <aside id="table-drawer" class="drawer collapsed">
+        <button id="drawer-toggle" class="drawer__toggle" title="Mostrar/Ocultar tabla">
+          <i class="fa-solid fa-table"></i>
+        </button>
+
+        <div class="drawer__panel">
+          <div class="drawer__header">
+            <div class="drawer__title">Listado de predios</div>
+            <div id="drawer-count" class="drawer__count">—</div>
+          </div>
+
+          <div class="drawer__body">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Nombre del propietario</th>
+                  <th>Estado</th>
+                  <th>Celular</th>
+                  <th>Estanques reg.</th>
+                  <th>Estanques ident.</th>
+                  <th>Nro Bombas</th>
+                  <th>Sindicato</th>
+                  <th>Central</th>
+                  <th>Federación</th>
+                </tr>
+              </thead>
+              <tbody id="table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <!-- =======================================================
+       PANTALLA DE BIENVENIDA (MODAL)
+       ======================================================= -->
+  <div id="welcome-overlay" class="welcome-overlay hidden" aria-hidden="true">
+    <div class="welcome-modal">
+      <div class="welcome-logo">
+        <img src="./Logo/Logo.png" alt="Logo institucional">
+      </div>
+
+      <h2 class="welcome-title">Bienvenido</h2>
+
+      <p class="welcome-text">
+        Este portal muestra informacion sobre los predios con produccion acuicola
+        del municipio de <b>Shinahota</b>.
+      </p>
+
+      <div class="welcome-actions">
+        <button id="welcome-close" class="welcome-btn">
+          Cerrar
+        </button>
+
+        <button id="welcome-howto" class="welcome-btn welcome-btn--secondary">
+          Como usar este portal
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =======================================================
+       TOUR / TUTORIAL OVERLAY
+       ======================================================= -->
+  <div id="tour-overlay" class="tour-overlay hidden" aria-hidden="true">
+    <div id="tour-spotlight" class="tour-spotlight"></div>
+
+    <div id="tour-panel" class="tour-panel">
+      <div class="tour-title" id="tour-title">Guía rápida</div>
+      <div class="tour-text" id="tour-text"></div>
+
+      <div class="tour-actions">
+        <button id="tour-close" class="tour-btn tour-btn--ghost">Cerrar tutorial</button>
+        <div class="tour-actions-right">
+          <button id="tour-next" class="tour-btn">Siguiente</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =======================================================
+       ADMIN PANEL MODAL (GESTIÓN DE CAMBIOS)
+       ======================================================= -->
+  <div id="admin-overlay" class="welcome-overlay hidden" aria-hidden="true">
+    <div class="welcome-modal admin-modal">
+      <div class="admin-header">
+        <h2 class="welcome-title" style="margin:0; text-align:left;">Gestión de Cambios</h2>
+        <div class="admin-stats">
+          <div class="admin-stat-item">Pendientes: <span id="admin-count-pending">0</span></div>
+          <button id="admin-close" class="legend__close" style="padding: 10px 14px;">Cerrar</button>
+        </div>
+      </div>
+
+      <div class="admin-tabs">
+        <button class="admin-tab active" data-status="pendiente">Pendientes</button>
+        <button class="admin-tab" data-status="aprobado">Aprobados</button>
+        <button class="admin-tab" data-status="rechazado">Rechazados</button>
+      </div>
+
+      <div id="admin-list" class="admin-list-container">
+        <!-- Tarjetas de cambios cargadas dinámicamente -->
+        <div class="loader-inline hidden">
+          <div class="spinner"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="https://unpkg.com/shpjs@latest/dist/shp.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./app.js"></script>
+</body>
+
+</html>
