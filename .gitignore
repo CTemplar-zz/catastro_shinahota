@@ -1,0 +1,19 @@
+# Fotos ahora se sirven desde Supabase Storage (no es necesario versionarlas)
+FotosCatastro/
+
+# Dependencias
+node_modules/
+
+# Componentes crudos de shapefiles (la app solo usa los .zip)
+Shapefiles/*.shp
+Shapefiles/*.dbf
+Shapefiles/*.shx
+Shapefiles/*.sbn
+Shapefiles/*.sbx
+Shapefiles/*.prj
+Shapefiles/*.cpg
+Shapefiles/*.xml
+
+# Sistema
+Thumbs.db
+.DS_Store
